@@ -43,6 +43,8 @@ jobs:
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
+          npm run dev &
+          npx wait-on http://localhost:5173
           python agent/fixer_agent.py
 
       - name: Push changes
