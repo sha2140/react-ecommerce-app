@@ -268,6 +268,10 @@ class AIFixerAgent:
                 if not api_key:
                     logging.error("GOOGLE_API_KEY environment variable not set.")
                     return None
+                
+                # Safe debugging: Log key presence and partial value (first/last 4 chars)
+                masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "****"
+                logging.info(f"Using GOOGLE_API_KEY: {masked_key} (length: {len(api_key)})")
 
                 client = genai.Client(api_key=api_key)
                 
