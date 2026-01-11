@@ -33,7 +33,7 @@ export const SELECTORS = {
     PRODUCT_CARD: '.product-card',
     PRODUCT_NAME: '.product-name',
     PRODUCT_CATEGORY: '.product-category',
-    ADD_TO_CART_BUTTON: '.btn-primary-1234',
+    ADD_TO_CART_BUTTON: '.btn-primary',
     CATEGORY_BUTTON: '.category-btn',
     CATEGORY_ACTIVE: '.category-btn.active',
     PRODUCTS_GRID: '.products-grid',

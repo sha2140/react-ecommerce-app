@@ -234,6 +234,16 @@ class AIFixerAgent:
                 logging.warning(f"Failed to trim JSON report: {e}")
                 json_report_content = "Failed to parse report for context."
 
+        # Include log files in the context
+        log_context = ""
+        for log_file in ["dev-server.log", "agent_execution.log"]:
+            if os.path.exists(log_file):
+                with open(log_file, "r") as f:
+                    content = f.read()
+                    # Only take the last 2000 characters to keep context size manageable
+                    truncated_log = content if len(content) < 2000 else "... [TRUNCATED]\n" + content[-2000:]
+                    log_context += f"\nLOG FILE: {log_file}\n```\n{truncated_log}\n```\n"
+
         context_str = ""
         for path, content in relevant_contents.items():
             # Truncate each file to 3000 chars to save tokens
@@ -251,6 +261,9 @@ class AIFixerAgent:
         ```json
         {json_report_content}
         ```
+
+        LOG FILES CONTEXT:
+        {log_context}
 
         CONTEXT FILES:
         {context_str}
@@ -376,7 +389,7 @@ class AIFixerAgent:
         logging.info(f"Committing fix: {message}")
         self.run_command("git add .")
         self.run_command(f'git commit -m "fix(auto): {message}"')
-        # self.run_command("git push") # Uncomment in CI
+        self.run_command("git push")
 
     def run(self):
         """Main execution loop."""
