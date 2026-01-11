@@ -8,7 +8,7 @@ const ProductList = () => {
   const filteredProducts =
     selectedCategory === 'All'
       ? products
-      : products.filter((product) => product.category === 'WrongCategory');
+      : products.filter((product) => product.category === selectedCategory);
 
   return (
     <div className="product-list-container">
