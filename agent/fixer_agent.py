@@ -63,15 +63,15 @@ class AIFixerAgent:
                 for step in scenario.get('steps', []):
                     if step.get('result', {}).get('status') == 'failed':
                         failure_info = {
-                            'feature': feature['name'],
-                            'scenario': scenario['name'],
-                            'step': step['name'],
-                            'error': step['result'].get('error_message'),
+                            'feature': feature.get('name', 'Unknown Feature'),
+                            'scenario': scenario.get('name', 'Unknown Scenario'),
+                            'step': step.get('name', step.get('keyword', 'Hook')),
+                            'error': step.get('result', {}).get('error_message'),
                             'location': step.get('match', {}).get('location'),
                             'uri': feature.get('uri')
                         }
                         failures.append(failure_info)
-                        logging.info(f"Detected failure in '{scenario['name']}' at step '{step['name']}'")
+                        logging.info(f"Detected failure in '{failure_info['scenario']}' at step '{failure_info['step']}'")
         return failures
 
     def get_file_content(self, path_with_line):
