@@ -185,6 +185,12 @@ class AIFixerAgent:
         if constants_path not in relevant_contents:
             relevant_contents[constants_path] = self.get_file_content(constants_path)
 
+        # Include the JSON report content for exact error details
+        json_report_content = ""
+        if os.path.exists(self.report_path):
+            with open(self.report_path, 'r') as f:
+                json_report_content = f.read()
+
         context_str = ""
         for path, content in relevant_contents.items():
             context_str += f"\nFILE: {path}\n```\n{content}\n```\n"
@@ -195,6 +201,11 @@ class AIFixerAgent:
 
         FAILURE LIST:
         {chr(10).join(failure_summaries)}
+
+        CUCUMBER JSON REPORT:
+        ```json
+        {json_report_content}
+        ```
 
         CONTEXT FILES:
         {context_str}
