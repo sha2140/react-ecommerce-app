@@ -180,10 +180,15 @@ class AIFixerAgent:
                 if path and path not in relevant_contents:
                     relevant_contents[path] = self.get_file_content(path)
 
-        # Always include constants.ts as it's a common source of root causes
-        constants_path = "e2e/constants/constants.ts"
-        if constants_path not in relevant_contents:
-            relevant_contents[constants_path] = self.get_file_content(constants_path)
+        # Always include shared files that are common failure points
+        critical_files = [
+            "e2e/constants/constants.ts",
+            "src/components/Login.jsx",
+            "src/components/ProductList.jsx"
+        ]
+        for path in critical_files:
+            if os.path.exists(path) and path not in relevant_contents:
+                relevant_contents[path] = self.get_file_content(path)
 
         # Include a trimmed version of the JSON report to save tokens
         json_report_content = ""
@@ -258,10 +263,12 @@ class AIFixerAgent:
         - Application code regressions (suggest fix for app code)
 
         CRITICAL INSTRUCTIONS:
-        1. Look for patterns. If multiple scenarios fail during login or interaction, the root cause is likely a shared selector in constants.ts or a page object.
-        2. Do NOT just increase timeouts if a selector looks wrong or an element isn't found.
-        3. If you see a mismatch between a selector in constants.ts and the HTML/JSX structure, fix the selector.
-        4. The 'target_file' MUST be a valid relative path from the project root.
+        1. PATTERN RECOGNITION: If multiple tests fail at the same step (e.g., login), it is almost CERTAINLY a shared selector in 'constants.ts' or a logic bug in 'src/'.
+        2. TIMEOUTS: In Playwright/Cucumber, a "timeout" error is usually a MASKED selector failure. The test is waiting for an element that doesn't exist. DO NOT simply increase timeouts. Find the broken selector or application logic instead.
+        3. SOURCE CODE VERIFICATION: Compare the selectors in 'constants.ts' with the 'data-testid', 'id', or 'className' in the 'src/' files. If they don't match, FIX the selector.
+        4. SELECTORS VS LOGIC: If the selector is correct but the element is missing, check the filtering/rendering logic in the corresponding 'src/' component.
+        5. MINIMAL CHANGES: Only change one thing at a time. Prefer fixing the root cause (selector or app logic) over adding waits.
+        6. PATHS: The 'target_file' MUST be a valid relative path from the project root.
 
         REQUIRED OUTPUT (JSON ONLY):
         {{
@@ -383,6 +390,8 @@ class AIFixerAgent:
                 logging.info("No fixes needed.")
                 return
 
+            applied_fixes = [] # Track fixes to avoid repeats
+
             for attempt in range(self.max_retries):
                 logging.info(f"Fix attempt {attempt + 1}/{self.max_retries}")
                 failures = self.parse_failures()
@@ -394,7 +403,18 @@ class AIFixerAgent:
                 # Process ALL failures for diagnosis
                 fix = self.diagnose_failures(failures)
                 
-                if fix and self.apply_fix(fix):
+                if not fix:
+                    logging.warning("Could not determine a fix automatically.")
+                    break
+
+                # Check if we've already tried this exact fix
+                fix_signature = f"{fix.get('target_file')}:{fix.get('old_code')}->{fix.get('new_code')}"
+                if fix_signature in applied_fixes:
+                    logging.warning("AI suggested a repeat fix. Breaking to avoid loop.")
+                    break
+                
+                if self.apply_fix(fix):
+                    applied_fixes.append(fix_signature)
                     logging.info("Fix applied. Re-running tests to verify...")
                     re_passed, _ = self.run_tests()
                     if re_passed:
@@ -404,7 +424,7 @@ class AIFixerAgent:
                     else:
                         logging.warning("Fix did not resolve the issue. Retrying...")
                 else:
-                    logging.warning("Could not determine or apply a fix automatically.")
+                    logging.warning("Could not apply the fix.")
                     break
             
             logging.error("Autonomous fixing failed. Please check the logs.")
