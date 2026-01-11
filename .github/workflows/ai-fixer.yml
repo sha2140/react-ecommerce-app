@@ -43,8 +43,13 @@ jobs:
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |
-          npm run dev > dev-server.log 2>&1 &
-          ./node_modules/.bin/wait-on http://127.0.0.1:5173 -t 60000
+          # Start the dev server in the background
+          npm run dev -- --host 127.0.0.1 --port 5173 > dev-server.log 2>&1 &
+          
+          # Wait for the server to be ready with increased timeout and specific protocol
+          ./node_modules/.bin/wait-on http-get://127.0.0.1:5173 -t 180000
+          
+          # Run the agent
           python agent/fixer_agent.py
 
       - name: Debug - Show Dev Server Logs
