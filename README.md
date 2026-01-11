@@ -1,9 +1,10 @@
 # React E-Commerce Application
 
-A modern, responsive React e-commerce application with shopping cart functionality, product categories, and a beautiful UI.
+A modern, responsive React e-commerce application with shopping cart functionality, product categories, authentication, and a beautiful UI.
 
 ## Features
 
+- 🔐 **User Authentication**: Login system with multiple user accounts
 - 🛍️ **Product Categories**: Browse products by category (Electronics, Clothing, Books, Home & Kitchen)
 - 🛒 **Shopping Cart**: Add items to cart, update quantities, and remove items
 - 🎨 **Modern UI**: Clean, responsive design with smooth animations
