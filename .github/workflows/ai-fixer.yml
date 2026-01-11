@@ -42,6 +42,7 @@ jobs:
       - name: Run Autonomous Agent
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_MODEL: gemini-1.5-flash # Using 1.5-flash for higher free-tier quota stability
         run: |
           python agent/fixer_agent.py
 
@@ -56,6 +57,17 @@ jobs:
             echo "--- Agent Execution Logs ---"
             cat agent_execution.log
           fi
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-reports
+          path: |
+            e2e/reports/
+            dev-server.log
+            agent_execution.log
+          retention-days: 7
 
       - name: Push changes
         if: success()
