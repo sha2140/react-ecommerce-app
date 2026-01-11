@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:e2e": "node --import tsx node_modules/@cucumber/cucumber/bin/cucumber-js --config e2e/cucumber.cjs && node e2e/reporter-config.cjs",
-    "test:e2e:headed": "HEADLESS=false node --import tsx node_modules/@cucumber/cucumber/bin/cucumber-js --config e2e/cucumber.cjs && node e2e/reporter-config.cjs",
+    "test:e2e": "cross-env NODE_OPTIONS=\"--import tsx\" npx @cucumber/cucumber --config e2e/cucumber.cjs && node e2e/reporter-config.cjs",
+    "test:e2e:headed": "cross-env HEADLESS=false NODE_OPTIONS=\"--import tsx\" npx @cucumber/cucumber --config e2e/cucumber.cjs && node e2e/reporter-config.cjs",
     "test:e2e:report": "node e2e/reporter-config.cjs"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.0.4",
+    "cross-env": "^10.1.0",
     "cucumber-html-reporter": "^7.2.0",
     "playwright": "^1.57.0",
     "ts-node": "^10.9.2",

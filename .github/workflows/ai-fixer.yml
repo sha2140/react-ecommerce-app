@@ -1,0 +1,52 @@
+name: Autonomous QA & Code-Fixing Agent
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for committing back
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npx playwright install --with-deps
+          python -m pip install --upgrade pip
+          pip install -r agent/requirements.txt
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "AI-Fixer-Agent"
+          git config --global user.email "ai-fixer@example.com"
+
+      - name: Run Autonomous Agent
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          python agent/fixer_agent.py
+
+      - name: Push changes
+        if: success()
+        run: |
+          # The agent script already commits, we just need to push
+          git push origin HEAD || echo "No changes to push"

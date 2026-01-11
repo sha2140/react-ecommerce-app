@@ -1,0 +1,338 @@
+[
+  {
+    "description": "  As a user\n  I want to add products from different categories to my cart\n  So that I can purchase items from various product categories",
+    "elements": [
+      {
+        "description": "",
+        "id": "add-products-to-cart;add-one-product-from-each-category-to-cart",
+        "keyword": "Scenario",
+        "line": 6,
+        "name": "Add one product from each category to cart",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 3270356600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 7,
+            "name": "I am logged in to the application",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:8"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2024448399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 8,
+            "name": "I select the \"Electronics\" category",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:18"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 757545599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 9,
+            "name": "I add \"Wireless Headphones\" to the cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:27"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 981442300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 10,
+            "name": "I select the \"Clothing\" category",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:18"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 582121100
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "I add \"Classic T-Shirt\" to the cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:27"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 890520300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "I select the \"Books\" category",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:18"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 634254899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 13,
+            "name": "I add \"The Great Gatsby\" to the cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:27"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 900198099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 14,
+            "name": "I select the \"Home & Kitchen\" category",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:18"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 605977300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 15,
+            "name": "I add \"Coffee Maker\" to the cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:27"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 938850099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "I navigate to the cart page",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:38"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 827046499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 17,
+            "name": "I should see 4 items in my cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:44"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 10066795300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 18,
+            "name": "I should see \"Wireless Headphones\" in my cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 12504199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "I should see \"Classic T-Shirt\" in my cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 9297200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 20,
+            "name": "I should see \"The Great Gatsby\" in my cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 6030199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "I should see \"Coffee Maker\" in my cart",
+            "match": {
+              "location": "e2e\\step-definitions\\cart.steps.ts:53"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5834499
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1242679400
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "add-products-to-cart",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Add Products to Cart",
+    "tags": [],
+    "uri": "e2e\\features\\addToCart.feature"
+  },
+  {
+    "description": "  As a user\n  I want to login to the application\n  So that I can access my account and shop for products",
+    "elements": [
+      {
+        "description": "",
+        "id": "user-login;successful-login-with-valid-credentials",
+        "keyword": "Scenario",
+        "line": 6,
+        "name": "Successful login with valid credentials",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 2211132900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 7,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "e2e\\step-definitions\\login.steps.ts:6"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1162087700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 8,
+            "name": "I enter username \"spider\" and password \"Spider@1234\"",
+            "match": {
+              "location": "e2e\\step-definitions\\login.steps.ts:17"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 69888200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 9,
+            "name": "I click the submit button",
+            "match": {
+              "location": "e2e\\step-definitions\\login.steps.ts:23"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 369323899
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 10,
+            "name": "I should be logged in successfully",
+            "match": {
+              "location": "e2e\\step-definitions\\login.steps.ts:28"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2985599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 11,
+            "name": "I should be redirected to the home page",
+            "match": {
+              "location": "e2e\\step-definitions\\login.steps.ts:38"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 10021405399
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1153011299
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "user-login",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "User Login",
+    "tags": [],
+    "uri": "e2e\\features\\login.feature"
+  }
+]
