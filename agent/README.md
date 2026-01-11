@@ -21,7 +21,8 @@ This agent automatically detects E2E test failures, diagnoses the root cause usi
 ## Configuration
 
 ### Environment Variables
-- `GOOGLE_API_KEY`: Required for Gemini 3 Flash diagnosis.
+- `GOOGLE_API_KEY`: Required for Gemini diagnosis.
+- `GEMINI_MODEL`: (Optional) The model to use. Defaults to `gemini-1.5-flash` for free-tier stability. Can be set to `gemini-3-flash-preview`.
 
 ### Requirements
 - Python 3.10+

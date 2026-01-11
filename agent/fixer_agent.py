@@ -170,7 +170,7 @@ class AIFixerAgent:
         failure_summaries = []
         relevant_contents = {}
 
-        for failure in failures:
+        for failure in failures[:5]: # Limit to top 5 failures to save tokens
             summary = f"- Scenario: {failure['scenario']}\n  Step: {failure['step']}\n  Error: {failure['error']}\n  Location: {failure['location']}"
             failure_summaries.append(summary)
             
@@ -192,29 +192,48 @@ class AIFixerAgent:
                 with open(self.report_path, 'r') as f:
                     full_report = json.load(f)
                 
-                # Trim the report to only include failed features/elements
+                # Trim the report even more aggressively
                 trimmed_report = []
                 for feature in full_report:
-                    has_failure = False
                     failed_elements = []
                     for element in feature.get('elements', []):
                         if any(step.get('result', {}).get('status') == 'failed' for step in element.get('steps', [])):
-                            failed_elements.append(element)
-                            has_failure = True
+                            # Only keep essential fields
+                            trimmed_element = {
+                                "name": element.get("name"),
+                                "steps": [
+                                    {
+                                        "name": s.get("name"),
+                                        "keyword": s.get("keyword"),
+                                        "result": s.get("result"),
+                                        "match": s.get("match")
+                                    }
+                                    for s in element.get("steps", [])
+                                    if s.get("result", {}).get("status") == "failed"
+                                ]
+                            }
+                            failed_elements.append(trimmed_element)
                     
-                    if has_failure:
-                        feature_copy = feature.copy()
-                        feature_copy['elements'] = failed_elements
-                        trimmed_report.append(feature_copy)
+                    if failed_elements:
+                        trimmed_report.append({
+                            "name": feature.get("name"),
+                            "uri": feature.get("uri"),
+                            "elements": failed_elements
+                        })
                 
                 json_report_content = json.dumps(trimmed_report, indent=2)
+                # Hard limit for safety
+                if len(json_report_content) > 10000:
+                    json_report_content = json_report_content[:10000] + "... [TRUNCATED]"
             except Exception as e:
                 logging.warning(f"Failed to trim JSON report: {e}")
                 json_report_content = "Failed to parse report for context."
 
         context_str = ""
         for path, content in relevant_contents.items():
-            context_str += f"\nFILE: {path}\n```\n{content}\n```\n"
+            # Truncate each file to 3000 chars to save tokens
+            truncated_content = content if len(content) < 3000 else content[:3000] + "... [TRUNCATED]"
+            context_str += f"\nFILE: {path}\n```\n{truncated_content}\n```\n"
 
         prompt = f"""
         You are an Autonomous QA Engineer. Multiple E2E tests have failed. 
@@ -275,11 +294,17 @@ class AIFixerAgent:
 
                 client = genai.Client(api_key=api_key)
                 
+                # Determine model name from environment or default to gemini-1.5-flash for stability
+                # gemini-3-flash-preview is currently very restricted in free tier
+                model_name = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+                logging.info(f"Diagnosing with model: {model_name}")
+
                 response = client.models.generate_content(
-                    model='gemini-3-flash-preview',
+                    model=model_name,
                     contents=prompt,
                     config=types.GenerateContentConfig(
-                        response_mime_type="application/json"
+                        response_mime_type="application/json",
+                        max_output_tokens=2048
                     )
                 )
                 

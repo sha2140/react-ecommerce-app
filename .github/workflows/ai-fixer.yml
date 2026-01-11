@@ -42,6 +42,7 @@ jobs:
       - name: Run Autonomous Agent
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_MODEL: gemini-1.5-flash # Using 1.5-flash for higher free-tier quota stability
         run: |
           python agent/fixer_agent.py
 
