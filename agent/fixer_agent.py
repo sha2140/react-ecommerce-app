@@ -25,6 +25,60 @@ class AIFixerAgent:
         self.test_cmd = test_cmd
         self.max_retries = 2
         self.git_enabled = True # Set to False for local testing without git
+        self.server_process = None
+
+    def start_dev_server(self):
+        """Starts the dev server and waits for it to be ready."""
+        logging.info("Starting development server...")
+        # Standardizing on 127.0.0.1 for CI stability
+        server_cmd = "npm run dev -- --host 127.0.0.1 --port 5173"
+        
+        # Redirect output to a log file for diagnosis
+        log_file = open("dev-server.log", "w")
+        
+        # Use start_new_session to ensure the server and its children can be killed
+        if os.name == 'nt':
+            self.server_process = subprocess.Popen(
+                server_cmd, 
+                shell=True, 
+                stdout=log_file, 
+                stderr=log_file,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            )
+        else:
+            self.server_process = subprocess.Popen(
+                server_cmd, 
+                shell=True, 
+                stdout=log_file, 
+                stderr=log_file,
+                preexec_fn=os.setsid
+            )
+        
+        logging.info("Waiting for server to respond at http://127.0.0.1:5173...")
+        # Use http-get for a more robust check
+        wait_cmd = "./node_modules/.bin/wait-on http-get://127.0.0.1:5173 -t 120000"
+        result = subprocess.run(wait_cmd, shell=True)
+        
+        if result.returncode != 0:
+            logging.error("Dev server failed to start within timeout. Check dev-server.log for details.")
+            return False
+        
+        logging.info("Dev server is ready.")
+        return True
+
+    def stop_dev_server(self):
+        """Gracefully stops the dev server and its children."""
+        if self.server_process:
+            logging.info("Stopping dev server...")
+            try:
+                if os.name == 'nt':
+                    subprocess.run(f"taskkill /F /T /PID {self.server_process.pid}", shell=True, capture_output=True)
+                else:
+                    import signal
+                    os.killpg(os.getpgid(self.server_process.pid), signal.SIGTERM)
+            except Exception as e:
+                logging.warning(f"Error stopping dev server: {e}")
+            self.server_process = None
 
     def run_command(self, cmd):
         """Helper to run shell commands and return results."""
@@ -211,38 +265,45 @@ class AIFixerAgent:
 
     def run(self):
         """Main execution loop."""
-        passed, _ = self.run_tests()
-        if passed:
-            logging.info("No fixes needed.")
-            return
+        if not self.start_dev_server():
+            # In a more advanced version, we could diagnose dev-server.log here
+            sys.exit(1)
 
-        for attempt in range(self.max_retries):
-            logging.info(f"Fix attempt {attempt + 1}/{self.max_retries}")
-            failures = self.parse_failures()
-            
-            if not failures:
-                logging.warning("No failures detected in report. Manual intervention may be needed.")
-                break
+        try:
+            passed, _ = self.run_tests()
+            if passed:
+                logging.info("No fixes needed.")
+                return
+
+            for attempt in range(self.max_retries):
+                logging.info(f"Fix attempt {attempt + 1}/{self.max_retries}")
+                failures = self.parse_failures()
                 
-            # Process the first failure (can be extended to handle multiple)
-            failure = failures[0]
-            fix = self.diagnose_failure(failure)
-            
-            if fix and self.apply_fix(fix):
-                logging.info("Fix applied. Re-running tests to verify...")
-                re_passed, _ = self.run_tests()
-                if re_passed:
-                    self.commit_and_push(f"Auto-fixed test failure in {failure['scenario']}")
-                    logging.info("Fix verified and committed.")
-                    return
+                if not failures:
+                    logging.warning("No failures detected in report. Manual intervention may be needed.")
+                    break
+                    
+                # Process the first failure (can be extended to handle multiple)
+                failure = failures[0]
+                fix = self.diagnose_failure(failure)
+                
+                if fix and self.apply_fix(fix):
+                    logging.info("Fix applied. Re-running tests to verify...")
+                    re_passed, _ = self.run_tests()
+                    if re_passed:
+                        self.commit_and_push(f"Auto-fixed test failure in {failure['scenario']}")
+                        logging.info("Fix verified and committed.")
+                        return
+                    else:
+                        logging.warning("Fix did not resolve the issue. Retrying...")
                 else:
-                    logging.warning("Fix did not resolve the issue. Retrying...")
-            else:
-                logging.warning("Could not determine or apply a fix automatically.")
-                break
-        
-        logging.error("Autonomous fixing failed. Please check the logs.")
-        sys.exit(1)
+                    logging.warning("Could not determine or apply a fix automatically.")
+                    break
+            
+            logging.error("Autonomous fixing failed. Please check the logs.")
+            sys.exit(1)
+        finally:
+            self.stop_dev_server()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Autonomous QA & Code-Fixing Agent")

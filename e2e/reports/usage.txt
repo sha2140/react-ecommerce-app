@@ -1,45 +1,45 @@
 ┌────────────────────────────────────────────────────────┬────────────┬────────────────────────────────────────┐
 │ Pattern / Text                                         │ Duration   │ Location                               │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I should see {int} items in my cart                    │ 10066.80ms │ e2e\step-definitions\cart.steps.ts:44  │
-│   I should see 4 items in my cart                      │ 10066.80ms │ e2e\features\addToCart.feature:17      │
+│ I should see {int} items in my cart                    │ 10037.01ms │ e2e\step-definitions\cart.steps.ts:44  │
+│   I should see 4 items in my cart                      │ 10037.01ms │ e2e\features\addToCart.feature:17      │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I should be redirected to the home page                │ 10021.41ms │ e2e\step-definitions\login.steps.ts:38 │
-│   I should be redirected to the home page              │ 10021.41ms │ e2e\features\login.feature:11          │
+│ I should be redirected to the home page                │ 10002.76ms │ e2e\step-definitions\login.steps.ts:38 │
+│   I should be redirected to the home page              │ 10002.76ms │ e2e\features\login.feature:11          │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I am logged in to the application                      │ 2024.45ms  │ e2e\step-definitions\cart.steps.ts:8   │
-│   I am logged in to the application                    │ 2024.45ms  │ e2e\features\addToCart.feature:7       │
+│ I am logged in to the application                      │ 2589.58ms  │ e2e\step-definitions\cart.steps.ts:8   │
+│   I am logged in to the application                    │ 2589.58ms  │ e2e\features\addToCart.feature:7       │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I navigate to the login page                           │ 1162.09ms  │ e2e\step-definitions\login.steps.ts:6  │
-│   I navigate to the login page                         │ 1162.09ms  │ e2e\features\login.feature:7           │
+│ I navigate to the login page                           │ 1016.08ms  │ e2e\step-definitions\login.steps.ts:6  │
+│   I navigate to the login page                         │ 1016.08ms  │ e2e\features\login.feature:7           │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I add {string} to the cart                             │ 927.75ms   │ e2e\step-definitions\cart.steps.ts:27  │
-│   I add "Wireless Headphones" to the cart              │ 981.44ms   │ e2e\features\addToCart.feature:9       │
-│   I add "Coffee Maker" to the cart                     │ 938.85ms   │ e2e\features\addToCart.feature:15      │
-│   I add "The Great Gatsby" to the cart                 │ 900.20ms   │ e2e\features\addToCart.feature:13      │
-│   I add "Classic T-Shirt" to the cart                  │ 890.52ms   │ e2e\features\addToCart.feature:11      │
+│ I add {string} to the cart                             │ 893.77ms   │ e2e\step-definitions\cart.steps.ts:27  │
+│   I add "Wireless Headphones" to the cart              │ 911.38ms   │ e2e\features\addToCart.feature:9       │
+│   I add "The Great Gatsby" to the cart                 │ 904.32ms   │ e2e\features\addToCart.feature:13      │
+│   I add "Classic T-Shirt" to the cart                  │ 900.63ms   │ e2e\features\addToCart.feature:11      │
+│   I add "Coffee Maker" to the cart                     │ 858.75ms   │ e2e\features\addToCart.feature:15      │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I navigate to the cart page                            │ 827.05ms   │ e2e\step-definitions\cart.steps.ts:38  │
-│   I navigate to the cart page                          │ 827.05ms   │ e2e\features\addToCart.feature:16      │
+│ I navigate to the cart page                            │ 714.35ms   │ e2e\step-definitions\cart.steps.ts:38  │
+│   I navigate to the cart page                          │ 714.35ms   │ e2e\features\addToCart.feature:16      │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I select the {string} category                         │ 644.97ms   │ e2e\step-definitions\cart.steps.ts:18  │
-│   I select the "Electronics" category                  │ 757.55ms   │ e2e\features\addToCart.feature:8       │
-│   I select the "Books" category                        │ 634.25ms   │ e2e\features\addToCart.feature:12      │
-│   I select the "Home & Kitchen" category               │ 605.98ms   │ e2e\features\addToCart.feature:14      │
-│   I select the "Clothing" category                     │ 582.12ms   │ e2e\features\addToCart.feature:10      │
+│ I select the {string} category                         │ 669.01ms   │ e2e\step-definitions\cart.steps.ts:18  │
+│   I select the "Electronics" category                  │ 973.11ms   │ e2e\features\addToCart.feature:8       │
+│   I select the "Books" category                        │ 599.19ms   │ e2e\features\addToCart.feature:12      │
+│   I select the "Clothing" category                     │ 556.70ms   │ e2e\features\addToCart.feature:10      │
+│   I select the "Home & Kitchen" category               │ 547.04ms   │ e2e\features\addToCart.feature:14      │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I click the submit button                              │ 369.32ms   │ e2e\step-definitions\login.steps.ts:23 │
-│   I click the submit button                            │ 369.32ms   │ e2e\features\login.feature:9           │
+│ I click the submit button                              │ 328.94ms   │ e2e\step-definitions\login.steps.ts:23 │
+│   I click the submit button                            │ 328.94ms   │ e2e\features\login.feature:9           │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I enter username {string} and password {string}        │ 69.89ms    │ e2e\step-definitions\login.steps.ts:17 │
-│   I enter username "spider" and password "Spider@1234" │ 69.89ms    │ e2e\features\login.feature:8           │
+│ I enter username {string} and password {string}        │ 79.87ms    │ e2e\step-definitions\login.steps.ts:17 │
+│   I enter username "spider" and password "Spider@1234" │ 79.87ms    │ e2e\features\login.feature:8           │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I should see {string} in my cart                       │ 8.42ms     │ e2e\step-definitions\cart.steps.ts:53  │
-│   I should see "Wireless Headphones" in my cart        │ 12.50ms    │ e2e\features\addToCart.feature:18      │
-│   I should see "Classic T-Shirt" in my cart            │ 9.30ms     │ e2e\features\addToCart.feature:19      │
-│   I should see "The Great Gatsby" in my cart           │ 6.03ms     │ e2e\features\addToCart.feature:20      │
-│   I should see "Coffee Maker" in my cart               │ 5.83ms     │ e2e\features\addToCart.feature:21      │
+│ I should see {string} in my cart                       │ 6.03ms     │ e2e\step-definitions\cart.steps.ts:53  │
+│   I should see "Wireless Headphones" in my cart        │ 6.75ms     │ e2e\features\addToCart.feature:18      │
+│   I should see "The Great Gatsby" in my cart           │ 6.17ms     │ e2e\features\addToCart.feature:20      │
+│   I should see "Coffee Maker" in my cart               │ 5.79ms     │ e2e\features\addToCart.feature:21      │
+│   I should see "Classic T-Shirt" in my cart            │ 5.43ms     │ e2e\features\addToCart.feature:19      │
 ├────────────────────────────────────────────────────────┼────────────┼────────────────────────────────────────┤
-│ I should be logged in successfully                     │ 2.99ms     │ e2e\step-definitions\login.steps.ts:28 │
-│   I should be logged in successfully                   │ 2.99ms     │ e2e\features\login.feature:10          │
+│ I should be logged in successfully                     │ 3.24ms     │ e2e\step-definitions\login.steps.ts:28 │
+│   I should be logged in successfully                   │ 3.24ms     │ e2e\features\login.feature:10          │
 └────────────────────────────────────────────────────────┴────────────┴────────────────────────────────────────┘
