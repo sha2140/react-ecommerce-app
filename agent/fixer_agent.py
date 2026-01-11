@@ -387,9 +387,23 @@ class AIFixerAgent:
             return
 
         logging.info(f"Committing fix: {message}")
+        
+        # Check if there are changes to commit
+        status = self.run_command("git status --porcelain")
+        if not status.stdout.strip():
+            logging.info("No changes to commit.")
+            return
+
         self.run_command("git add .")
-        self.run_command(f'git commit -m "fix(auto): {message}"')
-        self.run_command("git push")
+        commit_res = self.run_command(f'git commit -m "fix(auto): {message}"')
+        logging.info(f"Commit output: {commit_res.stdout.strip()}")
+        
+        # In CI, we usually need to specify origin and head
+        push_res = self.run_command("git push origin HEAD")
+        if push_res.returncode == 0:
+            logging.info("Successfully pushed changes to repository.")
+        else:
+            logging.error(f"Failed to push changes: {push_res.stderr.strip()}")
 
     def run(self):
         """Main execution loop."""

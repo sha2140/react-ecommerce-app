@@ -9,6 +9,8 @@ on:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed for committing back
 
     steps:
       - name: Checkout repository
@@ -68,9 +70,3 @@ jobs:
             dev-server.log
             agent_execution.log
           retention-days: 7
-
-      - name: Push changes
-        if: success()
-        run: |
-          # The agent script already commits, we just need to push
-          git push origin HEAD || echo "No changes to push"
