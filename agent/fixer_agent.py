@@ -55,12 +55,30 @@ class AIFixerAgent:
             )
         
         logging.info("Waiting for server to respond at http://127.0.0.1:5173...")
-        # Use http-get for a more robust check
-        wait_cmd = "./node_modules/.bin/wait-on http-get://127.0.0.1:5173 -t 120000"
-        result = subprocess.run(wait_cmd, shell=True)
         
-        if result.returncode != 0:
+        # Native Python wait loop for better reliability in CI
+        import socket
+        import time
+        
+        start_time = time.time()
+        timeout = 120 # 2 minutes
+        server_ready = False
+        
+        while time.time() - start_time < timeout:
+            try:
+                with socket.create_connection(("127.0.0.1", 5173), timeout=2):
+                    server_ready = True
+                    break
+            except (ConnectionRefusedError, socket.timeout, OSError):
+                time.sleep(2)
+                continue
+        
+        if not server_ready:
             logging.error("Dev server failed to start within timeout. Check dev-server.log for details.")
+            # Print the last few lines of dev-server.log for immediate visibility
+            if os.path.exists("dev-server.log"):
+                with open("dev-server.log", "r") as f:
+                    logging.error(f"Last server logs:\n{f.read()}")
             return False
         
         logging.info("Dev server is ready.")
