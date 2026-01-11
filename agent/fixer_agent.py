@@ -167,9 +167,24 @@ class AIFixerAgent:
         logging.info(f"Diagnosing failure: {failure['scenario']} -> {failure['step']}")
         
         # Gather context for diagnosis
+        step_def_path = failure['location'].split(':')[0] if failure['location'] else "Unknown"
+        feature_path = failure['uri'] if failure['uri'] else "Unknown"
+        
         step_def_content = self.get_file_content(failure['location'])
         feature_content = self.get_file_content(failure['uri'])
         
+        # Get a list of potential target files to help the AI
+        project_structure = """
+        - e2e/
+          - features/ (*.feature)
+          - step-definitions/ (*.steps.ts)
+          - pages/ (*.ts)
+          - constants/ (constants.ts)
+        - src/
+          - components/ (*.jsx)
+          - context/ (*.jsx)
+        """
+
         prompt = f"""
         You are an Autonomous QA Engineer. An E2E test failed. 
         Your goal is to identify the root cause and provide a fix.
@@ -180,11 +195,19 @@ class AIFixerAgent:
         Failed Step: {failure['step']}
         Error: {failure['error']}
 
+        PROJECT STRUCTURE:
+        {project_structure}
+
+        AVAILABLE TARGET FILES (You SHOULD prefer these):
+        1. Feature File: {feature_path}
+        2. Step Definition: {step_def_path}
+        3. Note: You can also fix application code in 'src/...' or selectors in 'e2e/constants/constants.ts'
+
         CONTEXT:
-        Feature File Content:
+        Feature File Content ({feature_path}):
         {feature_content}
 
-        Step Definition Content:
+        Step Definition Content ({step_def_path}):
         {step_def_content}
 
         CATEGORIES OF FAILURE:
@@ -199,6 +222,7 @@ class AIFixerAgent:
         - If the application is broken, fix the application code.
         - Never disable assertions; fix them.
         - Keep changes minimal and safe.
+        - The 'target_file' MUST be a valid relative path from the project root.
 
         REQUIRED OUTPUT (JSON ONLY):
         {{
