@@ -162,7 +162,7 @@ class AIFixerAgent:
 
     def diagnose_failures(self, failures):
         """
-        Analyzes the failures using Gemini 3 Flash.
+        Analyzes the failures using Groq.
         Sends ALL failures to the model for better context.
         """
         logging.info(f"Diagnosing {len(failures)} failures...")
@@ -273,57 +273,61 @@ class AIFixerAgent:
         }}
         """
 
-        logging.info("Sending multi-failure context to Gemini 3 Flash...")
+        logging.info("Sending multi-failure context to Groq...")
         
         import time
         max_api_retries = 3
         
         for api_attempt in range(max_api_retries):
             try:
-                from google import genai
-                from google.genai import types
+                from groq import Groq
                 
-                api_key = os.environ.get("GOOGLE_API_KEY")
+                api_key = os.environ.get("GROQ_API_KEY")
                 if not api_key:
-                    logging.error("GOOGLE_API_KEY environment variable not set.")
+                    logging.error("GROQ_API_KEY environment variable not set.")
                     return None
                 
                 # Safe debugging: Log key presence and partial value (first/last 4 chars)
                 masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "****"
-                logging.info(f"Using GOOGLE_API_KEY: {masked_key} (length: {len(api_key)})")
+                logging.info(f"Using GROQ_API_KEY: {masked_key} (length: {len(api_key)})")
 
-                client = genai.Client(api_key=api_key)
+                client = Groq(api_key=api_key)
                 
-                # Determine model name from environment or default to gemini-1.5-flash for stability
-                # gemini-3-flash-preview is currently very restricted in free tier
-                model_name = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
+                # Determine model name from environment or default to llama-3.3-70b-versatile
+                model_name = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
                 logging.info(f"Diagnosing with model: {model_name}")
 
-                response = client.models.generate_content(
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are a helpful assistant that outputs JSON."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        }
+                    ],
                     model=model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        max_output_tokens=2048
-                    )
+                    response_format={"type": "json_object"},
                 )
                 
-                fix_data = json.loads(response.text)
+                fix_data = json.loads(chat_completion.choices[0].message.content)
                 logging.info(f"Diagnosis complete: {fix_data.get('root_cause_category')}")
                 logging.info(f"Analysis: {fix_data.get('analysis')}")
                 return fix_data
                 
             except Exception as e:
                 error_str = str(e)
-                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                if "429" in error_str or "rate_limit" in error_str.lower():
                     wait_time = 30 * (api_attempt + 1)
-                    logging.warning(f"Quota exceeded (429). Retrying in {wait_time}s... (Attempt {api_attempt + 1}/{max_api_retries})")
+                    logging.warning(f"Rate limit exceeded (429). Retrying in {wait_time}s... (Attempt {api_attempt + 1}/{max_api_retries})")
                     time.sleep(wait_time)
                 else:
-                    logging.error(f"Gemini diagnosis failed: {e}")
+                    logging.error(f"Groq diagnosis failed: {e}")
                     return None
         
-        logging.error("Failed to get diagnosis after multiple API retries due to quota limits.")
+        logging.error("Failed to get diagnosis after multiple API retries due to rate limits.")
         return None
 
     def apply_fix(self, fix_data):

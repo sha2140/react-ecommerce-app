@@ -21,8 +21,8 @@ This agent automatically detects E2E test failures, diagnoses the root cause usi
 ## Configuration
 
 ### Environment Variables
-- `GOOGLE_API_KEY`: Required for Gemini diagnosis.
-- `GEMINI_MODEL`: (Optional) The model to use. Defaults to `gemini-1.5-flash` for free-tier stability. Can be set to `gemini-3-flash-preview`.
+- `GROQ_API_KEY`: Required for Groq diagnosis.
+- `GROQ_MODEL`: (Optional) The model to use. Defaults to `llama-3.3-70b-versatile`.
 
 ### Requirements
 - Python 3.10+
