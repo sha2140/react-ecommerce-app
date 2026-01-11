@@ -141,19 +141,20 @@ class AIFixerAgent:
         logging.info("Sending context to Gemini 3 Flash for diagnosis...")
         
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
             
             api_key = os.environ.get("GOOGLE_API_KEY")
             if not api_key:
                 logging.error("GOOGLE_API_KEY environment variable not set.")
                 return None
 
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-3-flash-preview')
+            client = genai.Client(api_key=api_key)
             
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
+            response = client.models.generate_content(
+                model='gemini-3-flash-preview',
+                contents=prompt,
+                config=types.GenerateContentConfig(
                     response_mime_type="application/json"
                 )
             )
