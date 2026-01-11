@@ -185,11 +185,32 @@ class AIFixerAgent:
         if constants_path not in relevant_contents:
             relevant_contents[constants_path] = self.get_file_content(constants_path)
 
-        # Include the JSON report content for exact error details
+        # Include a trimmed version of the JSON report to save tokens
         json_report_content = ""
         if os.path.exists(self.report_path):
-            with open(self.report_path, 'r') as f:
-                json_report_content = f.read()
+            try:
+                with open(self.report_path, 'r') as f:
+                    full_report = json.load(f)
+                
+                # Trim the report to only include failed features/elements
+                trimmed_report = []
+                for feature in full_report:
+                    has_failure = False
+                    failed_elements = []
+                    for element in feature.get('elements', []):
+                        if any(step.get('result', {}).get('status') == 'failed' for step in element.get('steps', [])):
+                            failed_elements.append(element)
+                            has_failure = True
+                    
+                    if has_failure:
+                        feature_copy = feature.copy()
+                        feature_copy['elements'] = failed_elements
+                        trimmed_report.append(feature_copy)
+                
+                json_report_content = json.dumps(trimmed_report, indent=2)
+            except Exception as e:
+                logging.warning(f"Failed to trim JSON report: {e}")
+                json_report_content = "Failed to parse report for context."
 
         context_str = ""
         for path, content in relevant_contents.items():
@@ -235,33 +256,46 @@ class AIFixerAgent:
 
         logging.info("Sending multi-failure context to Gemini 3 Flash...")
         
-        try:
-            from google import genai
-            from google.genai import types
-            
-            api_key = os.environ.get("GOOGLE_API_KEY")
-            if not api_key:
-                logging.error("GOOGLE_API_KEY environment variable not set.")
-                return None
+        import time
+        max_api_retries = 3
+        
+        for api_attempt in range(max_api_retries):
+            try:
+                from google import genai
+                from google.genai import types
+                
+                api_key = os.environ.get("GOOGLE_API_KEY")
+                if not api_key:
+                    logging.error("GOOGLE_API_KEY environment variable not set.")
+                    return None
 
-            client = genai.Client(api_key=api_key)
-            
-            response = client.models.generate_content(
-                model='gemini-3-flash-preview',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
+                client = genai.Client(api_key=api_key)
+                
+                response = client.models.generate_content(
+                    model='gemini-3-flash-preview',
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json"
+                    )
                 )
-            )
-            
-            fix_data = json.loads(response.text)
-            logging.info(f"Diagnosis complete: {fix_data.get('root_cause_category')}")
-            logging.info(f"Analysis: {fix_data.get('analysis')}")
-            return fix_data
-            
-        except Exception as e:
-            logging.error(f"Gemini diagnosis failed: {e}")
-            return None
+                
+                fix_data = json.loads(response.text)
+                logging.info(f"Diagnosis complete: {fix_data.get('root_cause_category')}")
+                logging.info(f"Analysis: {fix_data.get('analysis')}")
+                return fix_data
+                
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    wait_time = 30 * (api_attempt + 1)
+                    logging.warning(f"Quota exceeded (429). Retrying in {wait_time}s... (Attempt {api_attempt + 1}/{max_api_retries})")
+                    time.sleep(wait_time)
+                else:
+                    logging.error(f"Gemini diagnosis failed: {e}")
+                    return None
+        
+        logging.error("Failed to get diagnosis after multiple API retries due to quota limits.")
+        return None
 
     def apply_fix(self, fix_data):
         """Applies a code fix to the repository."""
