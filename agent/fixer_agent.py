@@ -160,81 +160,69 @@ class AIFixerAgent:
                 return f.read()
         return ""
 
-    def diagnose_failure(self, failure):
+    def diagnose_failures(self, failures):
         """
-        Analyzes the failure using Gemini 3 Flash.
+        Analyzes the failures using Gemini 3 Flash.
+        Sends ALL failures to the model for better context.
         """
-        logging.info(f"Diagnosing failure: {failure['scenario']} -> {failure['step']}")
+        logging.info(f"Diagnosing {len(failures)} failures...")
         
-        # Gather context for diagnosis
-        step_def_path = failure['location'].split(':')[0] if failure['location'] else "Unknown"
-        feature_path = failure['uri'] if failure['uri'] else "Unknown"
-        
-        step_def_content = self.get_file_content(failure['location'])
-        feature_content = self.get_file_content(failure['uri'])
-        
-        # Get a list of potential target files to help the AI
-        project_structure = """
-        - e2e/
-          - features/ (*.feature)
-          - step-definitions/ (*.steps.ts)
-          - pages/ (*.ts)
-          - constants/ (constants.ts)
-        - src/
-          - components/ (*.jsx)
-          - context/ (*.jsx)
-        """
+        failure_summaries = []
+        relevant_contents = {}
+
+        for failure in failures:
+            summary = f"- Scenario: {failure['scenario']}\n  Step: {failure['step']}\n  Error: {failure['error']}\n  Location: {failure['location']}"
+            failure_summaries.append(summary)
+            
+            # Gather unique file contents
+            for path_key in ['location', 'uri']:
+                path = failure.get(path_key, "").split(':')[0]
+                if path and path not in relevant_contents:
+                    relevant_contents[path] = self.get_file_content(path)
+
+        # Always include constants.ts as it's a common source of root causes
+        constants_path = "e2e/constants/constants.ts"
+        if constants_path not in relevant_contents:
+            relevant_contents[constants_path] = self.get_file_content(constants_path)
+
+        context_str = ""
+        for path, content in relevant_contents.items():
+            context_str += f"\nFILE: {path}\n```\n{content}\n```\n"
 
         prompt = f"""
-        You are an Autonomous QA Engineer. An E2E test failed. 
-        Your goal is to identify the root cause and provide a fix.
+        You are an Autonomous QA Engineer. Multiple E2E tests have failed. 
+        Your goal is to identify the SINGLE root cause and provide a fix.
 
-        FAILURE DETAILS:
-        Feature: {failure['feature']}
-        Scenario: {failure['scenario']}
-        Failed Step: {failure['step']}
-        Error: {failure['error']}
+        FAILURE LIST:
+        {chr(10).join(failure_summaries)}
 
-        PROJECT STRUCTURE:
-        {project_structure}
-
-        AVAILABLE TARGET FILES (You SHOULD prefer these):
-        1. Feature File: {feature_path}
-        2. Step Definition: {step_def_path}
-        3. Note: You can also fix application code in 'src/...' or selectors in 'e2e/constants/constants.ts'
-
-        CONTEXT:
-        Feature File Content ({feature_path}):
-        {feature_content}
-
-        Step Definition Content ({step_def_path}):
-        {step_def_content}
+        CONTEXT FILES:
+        {context_str}
 
         CATEGORIES OF FAILURE:
         - Flaky timing (suggest adding wait)
-        - Selectors / Locators (suggest new selector)
+        - Selectors / Locators (suggest new selector in constants.ts or page object)
         - API contract changes (suggest updating test or app)
         - Assertion mismatch (suggest fixing logic)
         - Application code regressions (suggest fix for app code)
 
-        POLICY:
-        - Prefer fixing tests ONLY if the application behavior is correct.
-        - If the application is broken, fix the application code.
-        - Never disable assertions; fix them.
-        - Keep changes minimal and safe.
-        - The 'target_file' MUST be a valid relative path from the project root.
+        CRITICAL INSTRUCTIONS:
+        1. Look for patterns. If multiple scenarios fail during login or interaction, the root cause is likely a shared selector in constants.ts or a page object.
+        2. Do NOT just increase timeouts if a selector looks wrong or an element isn't found.
+        3. If you see a mismatch between a selector in constants.ts and the HTML/JSX structure, fix the selector.
+        4. The 'target_file' MUST be a valid relative path from the project root.
 
         REQUIRED OUTPUT (JSON ONLY):
         {{
             "root_cause_category": "one of the categories above",
-            "analysis": "detailed reasoning",
+            "analysis": "detailed reasoning showing you found the root cause",
             "target_file": "relative/path/to/file",
             "old_code": "exact string to replace",
             "new_code": "new string to insert"
         }}
         """
 
-        logging.info("Sending context to Gemini 3 Flash for diagnosis...")
+        logging.info("Sending multi-failure context to Gemini 3 Flash...")
         
         try:
             from google import genai
@@ -325,15 +313,14 @@ class AIFixerAgent:
                     logging.warning("No failures detected in report. Manual intervention may be needed.")
                     break
                     
-                # Process the first failure (can be extended to handle multiple)
-                failure = failures[0]
-                fix = self.diagnose_failure(failure)
+                # Process ALL failures for diagnosis
+                fix = self.diagnose_failures(failures)
                 
                 if fix and self.apply_fix(fix):
                     logging.info("Fix applied. Re-running tests to verify...")
                     re_passed, _ = self.run_tests()
                     if re_passed:
-                        self.commit_and_push(f"Auto-fixed test failure in {failure['scenario']}")
+                        self.commit_and_push(f"Auto-fixed {len(failures)} test failure(s)")
                         logging.info("Fix verified and committed.")
                         return
                     else:
