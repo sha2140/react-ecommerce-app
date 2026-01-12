@@ -184,7 +184,9 @@ class AIFixerAgent:
         critical_files = [
             "e2e/constants/constants.ts",
             "src/components/Login.jsx",
-            "src/components/ProductList.jsx"
+            "src/components/Login.css",
+            "src/components/ProductList.jsx",
+            "src/App.css"
         ]
         for path in critical_files:
             if os.path.exists(path) and path not in relevant_contents:
@@ -271,6 +273,7 @@ class AIFixerAgent:
         CATEGORIES OF FAILURE:
         - Flaky timing (suggest adding wait)
         - Selectors / Locators (suggest new selector in constants.ts or page object)
+        - Visual regression (check for CSS/layout changes in 'src/' or suggest updating snapshot if intentional)
         - API contract changes (suggest updating test or app)
         - Assertion mismatch (suggest fixing logic)
         - Application code regressions (suggest fix for app code)
@@ -278,7 +281,8 @@ class AIFixerAgent:
         CRITICAL INSTRUCTIONS:
         1. PATTERN RECOGNITION: If multiple tests fail at the same step (e.g., login), it is almost CERTAINLY a shared selector in 'constants.ts' or a logic bug in 'src/'.
         2. TIMEOUTS: In Playwright/Cucumber, a "timeout" error is usually a MASKED selector failure. The test is waiting for an element that doesn't exist. DO NOT simply increase timeouts. Find the broken selector or application logic instead.
-        3. SOURCE CODE VERIFICATION: Compare the selectors in 'constants.ts' with the 'data-testid', 'id', or 'className' in the 'src/' files. If they don't match, FIX the selector.
+        3. VISUAL REGRESSIONS: If you see "Visual regression detected", look at recent changes in CSS files or JSX structure. If the change was intentional, the fix might be to delete the old baseline so a new one is created.
+        4. SOURCE CODE VERIFICATION: Compare the selectors in 'constants.ts' with the 'data-testid', 'id', or 'className' in the 'src/' files. If they don't match, FIX the selector.
         4. SELECTORS VS LOGIC: If the selector is correct but the element is missing, check the filtering/rendering logic in the corresponding 'src/' component.
         5. MINIMAL CHANGES: Only change one thing at a time. Prefer fixing the root cause (selector or app logic) over adding waits.
         6. PATHS: The 'target_file' MUST be a valid relative path from the project root.

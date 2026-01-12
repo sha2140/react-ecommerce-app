@@ -2,6 +2,10 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import { Page } from 'playwright';
 import { LoginPage } from '../pages/LoginPage.js';
 import { APP_CONFIG } from '../constants/constants.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
 
 Given('I navigate to the login page', async function () {
   const loginPage: LoginPage = this.loginPage;
@@ -11,6 +15,48 @@ Given('I navigate to the login page', async function () {
   const isDisplayed = await loginPage.isLoginPageDisplayed();
   if (!isDisplayed) {
     throw new Error('Login page is not displayed');
+  }
+});
+
+Then('the login page should match the baseline snapshot', async function () {
+  const page: Page = this.page;
+  const screenshotPath = path.join(process.cwd(), 'e2e', 'reports', 'screenshots', 'current-login.png');
+  const baselinePath = path.join(process.cwd(), 'e2e', 'screenshots', 'baseline', 'login-page.png');
+  const diffPath = path.join(process.cwd(), 'e2e', 'reports', 'screenshots', 'diff-login.png');
+
+  // Create baseline directory if it doesn't exist
+  if (!fs.existsSync(path.dirname(baselinePath))) {
+    fs.mkdirSync(path.dirname(baselinePath), { recursive: true });
+  }
+
+  // Take current screenshot
+  await page.screenshot({ path: screenshotPath });
+
+  // If no baseline exists, save current as baseline and pass (or fail to alert dev)
+  if (!fs.existsSync(baselinePath)) {
+    fs.copyFileSync(screenshotPath, baselinePath);
+    console.log('Baseline snapshot created for login page.');
+    return;
+  }
+
+  // Compare screenshots
+  const img1 = PNG.sync.read(fs.readFileSync(baselinePath));
+  const img2 = PNG.sync.read(fs.readFileSync(screenshotPath));
+  const { width, height } = img1;
+  const diff = new PNG({ width, height });
+
+  const numDiffPixels = pixelmatch(
+    img1.data,
+    img2.data,
+    diff.data,
+    width,
+    height,
+    { threshold: 0.1 }
+  );
+
+  if (numDiffPixels > 0) {
+    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    throw new Error(`Visual regression detected! ${numDiffPixels} pixels changed. Diff saved at ${diffPath}`);
   }
 });
 
