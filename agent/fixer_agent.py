@@ -20,9 +20,11 @@ class AIFixerAgent:
     Autonomous QA Agent that runs tests, diagnoses failures, 
     applies fixes, and commits code.
     """
-    def __init__(self, report_path="e2e/reports/cucumber-report.json", test_cmd="npm run test:e2e"):
+    def __init__(self, report_path="e2e/reports/cucumber-report.json", unit_report_path="unit-test-report.json", test_cmd="npm run test:e2e", unit_test_cmd="npm run test:unit"):
         self.report_path = report_path
+        self.unit_report_path = unit_report_path
         self.test_cmd = test_cmd
+        self.unit_test_cmd = unit_test_cmd
         self.max_retries = 2
         self.git_enabled = True # Set to False for local testing without git
         self.server_process = None
@@ -105,45 +107,74 @@ class AIFixerAgent:
         return result
 
     def run_tests(self):
-        """Runs the E2E test suite."""
-        logging.info("Starting E2E test execution...")
-        result = self.run_command(self.test_cmd)
+        """Runs the E2E and Unit test suites."""
+        logging.info("Starting test execution...")
         
-        if result.returncode == 0:
-            logging.info("Test suite passed successfully.")
-            return True, result.stdout
+        # Run Unit Tests
+        logging.info("Executing unit tests...")
+        unit_result = self.run_command(self.unit_test_cmd)
+        unit_passed = (unit_result.returncode == 0)
+        
+        # Run E2E Tests
+        logging.info("Executing E2E tests...")
+        e2e_result = self.run_command(self.test_cmd)
+        e2e_passed = (e2e_result.returncode == 0)
+        
+        if unit_passed and e2e_passed:
+            logging.info("All test suites passed successfully.")
+            return True, "All tests passed"
         else:
-            logging.error("Test suite failed.")
-            return False, result.stdout
+            msg = f"Failures detected: Unit={'failed' if not unit_passed else 'passed'}, E2E={'failed' if not e2e_passed else 'passed'}"
+            logging.error(msg)
+            return False, msg
 
     def parse_failures(self):
-        """Parses Cucumber JSON report for failure details."""
-        if not os.path.exists(self.report_path):
-            logging.warning(f"Report file not found: {self.report_path}")
-            return []
-
-        try:
-            with open(self.report_path, 'r') as f:
-                report = json.load(f)
-        except json.JSONDecodeError as e:
-            logging.error(f"Failed to parse JSON report: {e}")
-            return []
-
+        """Parses both E2E and Unit test reports for failure details."""
         failures = []
-        for feature in report:
-            for scenario in feature.get('elements', []):
-                for step in scenario.get('steps', []):
-                    if step.get('result', {}).get('status') == 'failed':
-                        failure_info = {
-                            'feature': feature.get('name', 'Unknown Feature'),
-                            'scenario': scenario.get('name', 'Unknown Scenario'),
-                            'step': step.get('name', step.get('keyword', 'Hook')),
-                            'error': step.get('result', {}).get('error_message'),
-                            'location': step.get('match', {}).get('location'),
-                            'uri': feature.get('uri')
-                        }
-                        failures.append(failure_info)
-                        logging.info(f"Detected failure in '{failure_info['scenario']}' at step '{failure_info['step']}'")
+        
+        # 1. Parse E2E Failures
+        if os.path.exists(self.report_path):
+            try:
+                with open(self.report_path, 'r') as f:
+                    report = json.load(f)
+                for feature in report:
+                    for scenario in feature.get('elements', []):
+                        for step in scenario.get('steps', []):
+                            if step.get('result', {}).get('status') == 'failed':
+                                failures.append({
+                                    'type': 'E2E',
+                                    'feature': feature.get('name', 'Unknown Feature'),
+                                    'scenario': scenario.get('name', 'Unknown Scenario'),
+                                    'step': step.get('name', step.get('keyword', 'Hook')),
+                                    'error': step.get('result', {}).get('error_message'),
+                                    'location': step.get('match', {}).get('location'),
+                                    'uri': feature.get('uri')
+                                })
+            except Exception as e:
+                logging.error(f"Failed to parse E2E report: {e}")
+
+        # 2. Parse Unit Failures
+        if os.path.exists(self.unit_report_path):
+            try:
+                with open(self.unit_report_path, 'r') as f:
+                    report = json.load(f)
+                for test_result in report.get('testResults', []):
+                    for assertion in test_result.get('assertionResults', []):
+                        if assertion.get('status') == 'failed':
+                            failures.append({
+                                'type': 'Unit',
+                                'test_file': test_result.get('name'),
+                                'test_name': assertion.get('fullName'),
+                                'error': "\n".join(assertion.get('failureMessages', [])),
+                                'location': test_result.get('name')
+                            })
+            except Exception as e:
+                logging.error(f"Failed to parse Unit report: {e}")
+
+        for f in failures:
+            name = f.get('scenario') or f.get('test_name')
+            logging.info(f"Detected {f['type']} failure in '{name}'")
+            
         return failures
 
     def get_file_content(self, path_with_line):
@@ -171,14 +202,26 @@ class AIFixerAgent:
         relevant_contents = {}
 
         for failure in failures[:5]: # Limit to top 5 failures to save tokens
-            summary = f"- Scenario: {failure['scenario']}\n  Step: {failure['step']}\n  Error: {failure['error']}\n  Location: {failure['location']}"
+            if failure['type'] == 'E2E':
+                summary = f"- [E2E] Scenario: {failure['scenario']}\n  Step: {failure['step']}\n  Error: {failure['error']}\n  Location: {failure['location']}"
+            else:
+                summary = f"- [Unit] Test: {failure['test_name']}\n  Error: {failure['error']}\n  File: {failure['test_file']}"
             failure_summaries.append(summary)
             
             # Gather unique file contents
-            for path_key in ['location', 'uri']:
-                path = failure.get(path_key, "").split(':')[0]
-                if path and path not in relevant_contents:
+            for path_key in ['location', 'uri', 'test_file']:
+                path = failure.get(path_key, "").split(':')[0] if failure.get(path_key) else None
+                if path and os.path.exists(path) and path not in relevant_contents:
                     relevant_contents[path] = self.get_file_content(path)
+            
+            # If it's a unit failure, check for associated snapshots
+            if failure['type'] == 'Unit' and failure.get('test_file'):
+                test_dir = os.path.dirname(failure['test_file'])
+                test_name = os.path.basename(failure['test_file'])
+                snap_dir = os.path.join(test_dir, "__snapshots__")
+                snap_file = os.path.join(snap_dir, f"{test_name}.snap")
+                if os.path.exists(snap_file) and snap_file not in relevant_contents:
+                    relevant_contents[snap_file] = self.get_file_content(snap_file)
 
         # Always include shared files that are common failure points
         critical_files = [
@@ -274,6 +317,7 @@ class AIFixerAgent:
         - Flaky timing (suggest adding wait)
         - Selectors / Locators (suggest new selector in constants.ts or page object)
         - Visual regression (check for CSS/layout changes in 'src/' or suggest updating snapshot if intentional)
+        - Component Snapshot regression (check '.snap' files and React components in 'src/')
         - API contract changes (suggest updating test or app)
         - Assertion mismatch (suggest fixing logic)
         - Application code regressions (suggest fix for app code)
@@ -281,7 +325,8 @@ class AIFixerAgent:
         CRITICAL INSTRUCTIONS:
         1. PATTERN RECOGNITION: If multiple tests fail at the same step (e.g., login), it is almost CERTAINLY a shared selector in 'constants.ts' or a logic bug in 'src/'.
         2. TIMEOUTS: In Playwright/Cucumber, a "timeout" error is usually a MASKED selector failure. The test is waiting for an element that doesn't exist. DO NOT simply increase timeouts. Find the broken selector or application logic instead.
-        3. VISUAL REGRESSIONS: If you see "Visual regression detected", look at recent changes in CSS files or JSX structure. If the change was intentional, the fix might be to delete the old baseline so a new one is created.
+        3. SNAPSHOTS: If you see "Component Snapshot regression" and a '.snap' file is provided, compare the snapshot content with the React component code. If the code change was intentional, the fix might be to update the snapshot content in the '.snap' file.
+        4. VISUAL REGRESSIONS: If you see "Visual regression detected", look at recent changes in CSS files or JSX structure.
         4. SOURCE CODE VERIFICATION: Compare the selectors in 'constants.ts' with the 'data-testid', 'id', or 'className' in the 'src/' files. If they don't match, FIX the selector.
         4. SELECTORS VS LOGIC: If the selector is correct but the element is missing, check the filtering/rendering logic in the corresponding 'src/' component.
         5. MINIMAL CHANGES: Only change one thing at a time. Prefer fixing the root cause (selector or app logic) over adding waits.
