@@ -129,7 +129,7 @@ class AIFixerAgent:
         # Parse E2E Failures
         if os.path.exists(self.report_path):
             try:
-                with open(self.report_path, 'r') as f:
+                with open(self.report_path, 'r', encoding='utf-8') as f:
                     report = json.load(f)
                 for feature in report:
                     for scenario in feature.get('elements', []):
@@ -162,7 +162,7 @@ class AIFixerAgent:
         clean_path = clean_path.replace('\\', os.sep).replace('/', os.sep)
         
         if os.path.exists(clean_path):
-            with open(clean_path, 'r') as f:
+            with open(clean_path, 'r', encoding='utf-8') as f:
                 return f.read()
         return ""
 
@@ -214,7 +214,7 @@ class AIFixerAgent:
         json_report_content = ""
         if os.path.exists(self.report_path):
             try:
-                with open(self.report_path, 'r') as f:
+                with open(self.report_path, 'r', encoding='utf-8') as f:
                     full_report = json.load(f)
                 
                 # Trim the report even more aggressively
@@ -258,7 +258,7 @@ class AIFixerAgent:
         log_context = ""
         for log_file in ["dev-server.log", "agent_execution.log"]:
             if os.path.exists(log_file):
-                with open(log_file, "r") as f:
+                with open(log_file, "r", encoding='utf-8') as f:
                     content = f.read()
                     # Only take the last 2000 characters to keep context size manageable
                     truncated_log = content if len(content) < 2000 else "... [TRUNCATED]\n" + content[-2000:]
@@ -390,13 +390,13 @@ class AIFixerAgent:
             logging.error(f"File not found: {file_path}")
             return False
 
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         # Try exact match first
         if old_code in content:
             updated_content = content.replace(old_code, new_code)
-            with open(file_path, 'w') as f:
+            with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(updated_content)
             logging.info(f"Successfully applied fix to {file_path}")
             return True
@@ -434,7 +434,7 @@ class AIFixerAgent:
                 new_lines = [(indent + l if l.strip() else l) for l in new_code.splitlines()]
                 
                 content_lines[i:i+len(old_lines)] = new_lines
-                with open(file_path, 'w') as f:
+                with open(file_path, 'w', encoding='utf-8') as f:
                     f.write('\n'.join(content_lines))
                 logging.info(f"Successfully applied robust fix to {file_path}")
                 return True
