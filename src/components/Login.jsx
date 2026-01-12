@@ -43,7 +43,7 @@ const Login = () => {
       <div className="login-box">
         <div className="login-header">
           <h1>🛍️ ShopMart</h1>
-          <h2>Hello There!</h2>
+          <h2>Welcome Back</h2>
           <p>Please sign in to continue</p>
         </div>
 

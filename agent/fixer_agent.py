@@ -374,7 +374,7 @@ class AIFixerAgent:
         return None
 
     def apply_fix(self, fix_data):
-        """Applies a code fix to the repository."""
+        """Applies a code fix to the repository with improved robustness."""
         if not fix_data:
             return False
             
@@ -386,21 +386,60 @@ class AIFixerAgent:
             logging.error("Invalid fix data provided.")
             return False
 
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                content = f.read()
-            
-            if old_code in content:
-                updated_content = content.replace(old_code, new_code)
-                with open(file_path, 'w') as f:
-                    f.write(updated_content)
-                logging.info(f"Successfully applied fix to {file_path}")
-                return True
-            else:
-                logging.error(f"Could not find exact code match in {file_path}")
-        else:
+        if not os.path.exists(file_path):
             logging.error(f"File not found: {file_path}")
+            return False
+
+        with open(file_path, 'r') as f:
+            content = f.read()
         
+        # Try exact match first
+        if old_code in content:
+            updated_content = content.replace(old_code, new_code)
+            with open(file_path, 'w') as f:
+                f.write(updated_content)
+            logging.info(f"Successfully applied fix to {file_path}")
+            return True
+        
+        # Try robust match (handling whitespace/indentation)
+        import re
+        def normalize(text):
+            return re.sub(r'\s+', '', text)
+        
+        normalized_old = normalize(old_code)
+        if not normalized_old: # Avoid matching empty/whitespace-only strings
+            return False
+            
+        # This is a bit risky but helps when the AI messes up indentation
+        # We search for the normalized version and try to replace it
+        # A better way is to search for lines that contain the parts of old_code
+        logging.info("Exact match failed. Attempting robust whitespace-insensitive match...")
+        
+        # Split into lines and try to find a sequence of lines that match
+        old_lines = [l.strip() for l in old_code.splitlines() if l.strip()]
+        content_lines = content.splitlines()
+        
+        for i in range(len(content_lines) - len(old_lines) + 1):
+            match = True
+            for j in range(len(old_lines)):
+                if old_lines[j] not in content_lines[i+j]:
+                    match = False
+                    break
+            
+            if match:
+                # Found a potential match area. 
+                # Instead of trying to be too smart, let's just replace the whole block of lines
+                # with the new_code, preserving the original indentation of the first line if possible.
+                indent = content_lines[i][:len(content_lines[i]) - len(content_lines[i].lstrip())]
+                new_lines = [(indent + l if l.strip() else l) for l in new_code.splitlines()]
+                
+                content_lines[i:i+len(old_lines)] = new_lines
+                with open(file_path, 'w') as f:
+                    f.write('\n'.join(content_lines))
+                logging.info(f"Successfully applied robust fix to {file_path}")
+                return True
+
+        logging.error(f"Could not find code match in {file_path} even with robust matching.")
         return False
 
     def commit_and_push(self, message):
