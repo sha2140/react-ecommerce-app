@@ -25,7 +25,7 @@ export const SELECTORS = {
   LOGIN: {
     USERNAME_INPUT: '#username',
     PASSWORD_INPUT: '#password',
-    SUBMIT_BUTTON: '.btn-login-1234',
+    SUBMIT_BUTTON: '.btn-login-123',
     ERROR_MESSAGE: '.error-message',
     LOGIN_CONTAINER: '.login-container',
   },
