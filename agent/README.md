@@ -29,6 +29,9 @@ This agent automatically detects E2E test failures, diagnoses the root cause usi
 - Node.js & Playwright
 - `google-generativeai` Python library
 
+## Documentation
+- [Architecture & Execution Flow](ARCHITECTURE.md)
+
 ## Example Commit Messages
 
 - `fix(auto): Fixed timing issue in 'Successful login' by adding await`
