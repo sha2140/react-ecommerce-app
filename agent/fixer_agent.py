@@ -214,14 +214,23 @@ class AIFixerAgent:
                 if path and os.path.exists(path) and path not in relevant_contents:
                     relevant_contents[path] = self.get_file_content(path)
             
-            # If it's a unit failure, check for associated snapshots
+            # If it's a unit failure, check for associated snapshots and the component itself
             if failure['type'] == 'Unit' and failure.get('test_file'):
-                test_dir = os.path.dirname(failure['test_file'])
-                test_name = os.path.basename(failure['test_file'])
+                test_file_path = failure['test_file']
+                test_dir = os.path.dirname(test_file_path)
+                test_filename = os.path.basename(test_file_path)
+                
+                # 1. Add Snapshot
                 snap_dir = os.path.join(test_dir, "__snapshots__")
-                snap_file = os.path.join(snap_dir, f"{test_name}.snap")
+                snap_file = os.path.join(snap_dir, f"{test_filename}.snap")
                 if os.path.exists(snap_file) and snap_file not in relevant_contents:
                     relevant_contents[snap_file] = self.get_file_content(snap_file)
+                
+                # 2. Try to find the component being tested (e.g., Login.test.jsx -> Login.jsx)
+                component_filename = test_filename.replace('.test.', '.')
+                component_path = os.path.join(test_dir, component_filename)
+                if os.path.exists(component_path) and component_path not in relevant_contents:
+                    relevant_contents[component_path] = self.get_file_content(component_path)
 
         # Always include shared files that are common failure points
         critical_files = [
