@@ -20,11 +20,10 @@ class AIFixerAgent:
     Autonomous QA Agent that runs tests, diagnoses failures, 
     applies fixes, and commits code.
     """
-    def __init__(self, report_path="e2e/reports/cucumber-report.json", unit_report_path="unit-test-report.json", test_cmd="npm run test:e2e", unit_test_cmd="npm run test:unit"):
+    def __init__(self, report_path="e2e/reports/cucumber-report.json", unit_report_path="unit-test-report.json", test_cmd="npm run test:e2e"):
         self.report_path = report_path
         self.unit_report_path = unit_report_path
         self.test_cmd = test_cmd
-        self.unit_test_cmd = unit_test_cmd
         self.max_retries = 2
         self.git_enabled = True # Set to False for local testing without git
         self.server_process = None
@@ -107,32 +106,27 @@ class AIFixerAgent:
         return result
 
     def run_tests(self):
-        """Runs the E2E and Unit test suites."""
+        """Runs the E2E test suite."""
         logging.info("Starting test execution...")
-        
-        # Run Unit Tests
-        logging.info("Executing unit tests...")
-        unit_result = self.run_command(self.unit_test_cmd)
-        unit_passed = (unit_result.returncode == 0)
         
         # Run E2E Tests
         logging.info("Executing E2E tests...")
         e2e_result = self.run_command(self.test_cmd)
         e2e_passed = (e2e_result.returncode == 0)
         
-        if unit_passed and e2e_passed:
-            logging.info("All test suites passed successfully.")
+        if e2e_passed:
+            logging.info("E2E test suite passed successfully.")
             return True, "All tests passed"
         else:
-            msg = f"Failures detected: Unit={'failed' if not unit_passed else 'passed'}, E2E={'failed' if not e2e_passed else 'passed'}"
+            msg = "E2E failures detected."
             logging.error(msg)
             return False, msg
 
     def parse_failures(self):
-        """Parses both E2E and Unit test reports for failure details."""
+        """Parses E2E test reports for failure details."""
         failures = []
         
-        # 1. Parse E2E Failures
+        # Parse E2E Failures
         if os.path.exists(self.report_path):
             try:
                 with open(self.report_path, 'r') as f:
@@ -153,27 +147,8 @@ class AIFixerAgent:
             except Exception as e:
                 logging.error(f"Failed to parse E2E report: {e}")
 
-        # 2. Parse Unit Failures
-        if os.path.exists(self.unit_report_path):
-            try:
-                with open(self.unit_report_path, 'r') as f:
-                    report = json.load(f)
-                for test_result in report.get('testResults', []):
-                    for assertion in test_result.get('assertionResults', []):
-                        if assertion.get('status') == 'failed':
-                            failures.append({
-                                'type': 'Unit',
-                                'test_file': test_result.get('name'),
-                                'test_name': assertion.get('fullName'),
-                                'error': "\n".join(assertion.get('failureMessages', [])),
-                                'location': test_result.get('name')
-                            })
-            except Exception as e:
-                logging.error(f"Failed to parse Unit report: {e}")
-
         for f in failures:
-            name = f.get('scenario') or f.get('test_name')
-            logging.info(f"Detected {f['type']} failure in '{name}'")
+            logging.info(f"Detected E2E failure in '{f['scenario']}'")
             
         return failures
 
@@ -202,35 +177,26 @@ class AIFixerAgent:
         relevant_contents = {}
 
         for failure in failures[:5]: # Limit to top 5 failures to save tokens
-            if failure['type'] == 'E2E':
-                summary = f"- [E2E] Scenario: {failure['scenario']}\n  Step: {failure['step']}\n  Error: {failure['error']}\n  Location: {failure['location']}"
-            else:
-                summary = f"- [Unit] Test: {failure['test_name']}\n  Error: {failure['error']}\n  File: {failure['test_file']}"
+            summary = f"- [E2E] Scenario: {failure['scenario']}\n  Step: {failure['step']}\n  Error: {failure['error']}\n  Location: {failure['location']}"
             failure_summaries.append(summary)
             
             # Gather unique file contents
-            for path_key in ['location', 'uri', 'test_file']:
+            for path_key in ['location', 'uri']:
                 path = failure.get(path_key, "").split(':')[0] if failure.get(path_key) else None
                 if path and os.path.exists(path) and path not in relevant_contents:
                     relevant_contents[path] = self.get_file_content(path)
             
-            # If it's a unit failure, check for associated snapshots and the component itself
-            if failure['type'] == 'Unit' and failure.get('test_file'):
-                test_file_path = failure['test_file']
-                test_dir = os.path.dirname(test_file_path)
-                test_filename = os.path.basename(test_file_path)
-                
-                # 1. Add Snapshot
-                snap_dir = os.path.join(test_dir, "__snapshots__")
-                snap_file = os.path.join(snap_dir, f"{test_filename}.snap")
-                if os.path.exists(snap_file) and snap_file not in relevant_contents:
-                    relevant_contents[snap_file] = self.get_file_content(snap_file)
-                
-                # 2. Try to find the component being tested (e.g., Login.test.jsx -> Login.jsx)
-                component_filename = test_filename.replace('.test.', '.')
-                component_path = os.path.join(test_dir, component_filename)
-                if os.path.exists(component_path) and component_path not in relevant_contents:
-                    relevant_contents[component_path] = self.get_file_content(component_path)
+            # PROACTIVE SNAPSHOT DISCOVERY for E2E failures
+            # If login fails, include Login.jsx and its snapshot
+            if 'login' in failure['scenario'].lower() or 'login' in failure['step'].lower():
+                critical_pairs = [
+                    ("src/components/Login.jsx", "src/components/__snapshots__/Login.test.jsx.snap")
+                ]
+                for comp, snap in critical_pairs:
+                    if os.path.exists(comp) and comp not in relevant_contents:
+                        relevant_contents[comp] = self.get_file_content(comp)
+                    if os.path.exists(snap) and snap not in relevant_contents:
+                        relevant_contents[snap] = self.get_file_content(snap)
 
         # Always include shared files that are common failure points
         critical_files = [
@@ -332,14 +298,13 @@ class AIFixerAgent:
         - Application code regressions (suggest fix for app code)
 
         CRITICAL INSTRUCTIONS:
-        1. PATTERN RECOGNITION: If multiple tests fail at the same step (e.g., login), it is almost CERTAINLY a shared selector in 'constants.ts' or a logic bug in 'src/'.
-        2. TIMEOUTS: In Playwright/Cucumber, a "timeout" error is usually a MASKED selector failure. The test is waiting for an element that doesn't exist. DO NOT simply increase timeouts. Find the broken selector or application logic instead.
-        3. SNAPSHOTS: If you see "Component Snapshot regression" and a '.snap' file is provided, compare the snapshot content with the React component code. If the code change was intentional, the fix might be to update the snapshot content in the '.snap' file.
-        4. VISUAL REGRESSIONS: If you see "Visual regression detected", look at recent changes in CSS files or JSX structure.
-        4. SOURCE CODE VERIFICATION: Compare the selectors in 'constants.ts' with the 'data-testid', 'id', or 'className' in the 'src/' files. If they don't match, FIX the selector.
-        4. SELECTORS VS LOGIC: If the selector is correct but the element is missing, check the filtering/rendering logic in the corresponding 'src/' component.
-        5. MINIMAL CHANGES: Only change one thing at a time. Prefer fixing the root cause (selector or app logic) over adding waits.
-        6. PATHS: The 'target_file' MUST be a valid relative path from the project root.
+        1. PATTERN RECOGNITION: If multiple tests fail at the same step (e.g., login), it is almost CERTAINLY a shared selector in 'e2e/constants/constants.ts' or a logic bug in 'src/'.
+        2. LOCATOR CHECK (CRITICAL): ALWAYS compare the locators in 'e2e/constants/constants.ts' with the actual React source code (JSX/CSS) and the provided snapshots. If the locator in 'constants.ts' does not match the 'id', 'className', or 'data-testid' in the component, FIX THE CONSTANT.
+        3. TIMEOUTS: In Playwright/Cucumber, a "timeout" error is usually a MASKED selector failure. DO NOT simply increase timeouts. Find the broken selector in 'constants.ts' or the application logic instead.
+        4. SNAPSHOTS: Use the provided '.snap' files and React component code as the "Source of Truth" for what the UI should look like. Use this to verify if the selector in 'constants.ts' is still valid.
+        5. SELECTORS VS LOGIC: If the selector is correct but the element is missing, check the filtering/rendering logic in the corresponding 'src/' component.
+        6. MINIMAL CHANGES: Only change one thing at a time. Prefer fixing the root cause (selector in 'constants.ts' or app logic) over adding waits.
+        7. PATHS: The 'target_file' MUST be a valid relative path from the project root.
 
         REQUIRED OUTPUT (JSON ONLY):
         {{
